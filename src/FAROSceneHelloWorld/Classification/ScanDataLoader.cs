@@ -10,46 +10,154 @@ using FAROSceneHelloWorld.Geometry;
 namespace FAROSceneHelloWorld.Classification
 {
     /// <summary>
-    /// Loads point cloud data from the active FARO SCENE workspace, or synthesizes a high-fidelity
-    /// TLS benchmark scan for standalone and in-process verification.
+    /// Loads point cloud data from an external file (.pts, .xyz, .txt), active SCENE workspace,
+    /// or synthesizes a benchmark scan for verification.
     /// </summary>
     public static class ScanDataLoader
     {
         /// <summary>
-        /// Attempts to acquire raw point coordinates from the active workspace scan.
-        /// Falls back to the synthetic indoor TLS scan if no workspace or scan points are open.
+        /// Reads point cloud data from an external point cloud file (.pts, .xyz, .txt, .csv, .asc).
         /// </summary>
-        public static PointCloud LoadActiveScanPoints(IAppHost host, out string sourceDescription)
+        public static PointCloud LoadFromFile(string filePath, Action<string, int> progressCallback = null)
         {
+            if (!File.Exists(filePath)) throw new FileNotFoundException("Scan file not found.", filePath);
+
+            var cloud = new PointCloud(100000);
+            char[] splitChars = new char[] { ' ', '\t', ',', ';' };
+
+            using (var reader = new StreamReader(filePath, System.Text.Encoding.ASCII, true, 65536))
+            {
+                string line = reader.ReadLine();
+                // Check if line 1 is point count (standard PTS format)
+                if (line != null && int.TryParse(line.Trim(), out int expectedCount) && expectedCount > 0)
+                {
+                    // PTS header line
+                }
+                else if (line != null)
+                {
+                    ParseLineAndAdd(line, splitChars, cloud);
+                }
+
+                int lineCounter = 0;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    lineCounter++;
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    ParseLineAndAdd(line, splitChars, cloud);
+
+                    if (lineCounter % 50000 == 0 && progressCallback != null)
+                    {
+                        progressCallback($"Loaded {cloud.Count:N0} points from file...", 10);
+                    }
+                }
+            }
+
+            cloud.RecalculateBoundsAndCentroid();
+            return cloud;
+        }
+
+        private static void ParseLineAndAdd(string line, char[] splitChars, PointCloud cloud)
+        {
+            var parts = line.Split(splitChars, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length >= 3)
+            {
+                if (float.TryParse(parts[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x) &&
+                    float.TryParse(parts[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y) &&
+                    float.TryParse(parts[2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float z))
+                {
+                    float intensity = 1.0f;
+                    if (parts.Length >= 4 && float.TryParse(parts[3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float inten))
+                    {
+                        intensity = inten;
+                    }
+                    cloud.Add(new Point3D(new Vector3(x, y, z), intensity));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Attempts to acquire raw point coordinates from the active workspace scan.
+        /// Returns null if no active loaded scan is available.
+        /// </summary>
+        public static PointCloud TryLoadActiveScanPoints(IAppHost host, out string sourceDescription, out string diagnosticMessage)
+        {
+            diagnosticMessage = string.Empty;
+            sourceDescription = string.Empty;
+
             try
             {
                 var wsHost = host?.WorkspaceHost;
-                if (wsHost != null && wsHost.HasActiveWorkspace && wsHost.ActiveWorkspace != null)
+                if (wsHost == null)
                 {
-                    var ws = wsHost.ActiveWorkspace;
-                    if (ws.Scans != null)
-                    {
-                        foreach (var scan in ws.Scans)
-                        {
-                            if (scan == null || !scan.IsLoaded) continue;
+                    diagnosticMessage = "SCENE WorkspaceHost interface is not attached in the current process context.";
+                    return null;
+                }
 
-                            // Attempt SDK point retrieval
-                            var cloud = TryReadScanPointsFromSDK(scan);
-                            if (cloud != null && cloud.Count > 100)
-                            {
-                                sourceDescription = $"Active SCENE Scan: '{scan.Name}' ({cloud.Count:N0} points)";
-                                return cloud;
-                            }
-                        }
+                if (!wsHost.HasActiveWorkspace || wsHost.ActiveWorkspace == null)
+                {
+                    diagnosticMessage = "No active workspace project (.lsproj) is currently open in SCENE.";
+                    return null;
+                }
+
+                var ws = wsHost.ActiveWorkspace;
+                if (ws.Scans == null)
+                {
+                    diagnosticMessage = "The active workspace project does not contain any scans.";
+                    return null;
+                }
+
+                int totalScans = 0;
+                int loadedScans = 0;
+
+                foreach (var scan in ws.Scans)
+                {
+                    if (scan == null) continue;
+                    totalScans++;
+
+                    if (!scan.IsLoaded) continue;
+                    loadedScans++;
+
+                    var cloud = TryReadScanPointsFromSDK(scan);
+                    if (cloud != null && cloud.Count > 100)
+                    {
+                        sourceDescription = $"Active SCENE Scan: '{scan.Name}' ({cloud.Count:N0} points)";
+                        return cloud;
                     }
+                }
+
+                if (totalScans == 0)
+                {
+                    diagnosticMessage = "The active project workspace contains 0 scans.";
+                }
+                else if (loadedScans == 0)
+                {
+                    diagnosticMessage = $"Workspace has {totalScans} scan(s), but none are loaded into memory. In SCENE, right-click the scan in the Structure Tree and select 'Load Points'.";
+                }
+                else
+                {
+                    diagnosticMessage = $"{loadedScans} scan(s) are loaded, but direct SDK raw point access was not available for this scan format.";
                 }
             }
             catch (Exception ex)
             {
+                diagnosticMessage = $"Workspace scan query exception: {ex.Message}";
                 host?.Logger?.LogWarning($"[FAROSceneHelloWorld] Could not read raw points from active scan: {ex.Message}");
             }
 
-            // High-fidelity TLS indoor benchmark cloud
+            return null;
+        }
+
+        /// <summary>
+        /// Attempts to read active scan points, or falls back to synthetic benchmark scan if not available.
+        /// </summary>
+        public static PointCloud LoadActiveScanPoints(IAppHost host, out string sourceDescription)
+        {
+            var cloud = TryLoadActiveScanPoints(host, out sourceDescription, out string diagnostic);
+            if (cloud != null)
+            {
+                return cloud;
+            }
+
             sourceDescription = "Synthetic TLS Indoor Scan Benchmark (Floors, Ceilings, Walls, Columns, MEP Pipes)";
             return GenerateBenchmarkScanCloud();
         }
@@ -73,7 +181,6 @@ namespace FAROSceneHelloWorld.Classification
             }
             catch
             {
-                // Fallback to reflection for different SCENE Open API versions
             }
 
             try
@@ -104,9 +211,9 @@ namespace FAROSceneHelloWorld.Classification
         /// - 1 Floor (Z=0.0m)
         /// - 1 Ceiling / Slab (Z=3.2m)
         /// - 4 Vertical Walls (X=±6m, Y=±5m)
-        /// - 2 Vertical Structural Columns (r=0.25m, h=3.2m at (2, 2) and (-2, -2))
-        /// - 2 MEP Utility Pipes (r=0.05m at Z=2.8m, and r=0.08m at Z=2.6m)
-        /// - Gaussian scanner surface noise
+        /// - 2 Vertical Structural Columns (r=0.25m, h=3.2m at (2.5, 1.5) and (-2.5, -1.5))
+        /// - 2 MEP Utility Pipes (r=0.05m at Z=2.8m, and r=0.08m at Z=2.5m)
+        /// - Gaussian scanner surface noise (sigma = 2.5mm)
         /// </summary>
         public static PointCloud GenerateBenchmarkScanCloud()
         {

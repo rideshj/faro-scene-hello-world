@@ -7,20 +7,32 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using FARO.LS.SDK.AppLogic;
 using FAROSceneHelloWorld.Classification;
+using FAROSceneHelloWorld.Geometry;
 
 namespace FAROSceneHelloWorld.UI
 {
     /// <summary>
     /// Interactive dialog displaying real-time extraction progress and hierarchical
     /// cluster results for structural and MEP elements.
+    /// Supports direct real scan file loading (.pts, .xyz, .txt), active SCENE workspace querying,
+    /// and explicit demo benchmark mode.
     /// </summary>
     public class ClassificationProgressDialog : Form
     {
         private readonly IAppHost _host;
-        private ProgressBar _progressBar;
+        private PointCloud _currentCloud;
+        private string _currentSourceDesc;
+
+        // UI Controls
         private Label _lblStatus;
         private Label _lblSubStatus;
+        private Label _lblSourceBadge;
+        private Label _lblSourceDetails;
+        private ProgressBar _progressBar;
         private TreeView _treeResults;
+        private Button _btnLoadFile;
+        private Button _btnQueryScene;
+        private Button _btnDemoBenchmark;
         private Button _btnRun;
         private Button _btnExportDxf;
         private Button _btnExportPts;
@@ -32,13 +44,14 @@ namespace FAROSceneHelloWorld.UI
         {
             _host = host;
             InitializeComponent();
+            CheckInitialSource();
         }
 
         private void InitializeComponent()
         {
             this.Text = "FARO SCENE - Structural & MEP Element Auto-Classifier";
-            this.Size = new Size(680, 580);
-            this.MinimumSize = new Size(600, 480);
+            this.Size = new Size(720, 650);
+            this.MinimumSize = new Size(640, 520);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
             this.BackColor = Color.FromArgb(245, 247, 250);
@@ -47,9 +60,9 @@ namespace FAROSceneHelloWorld.UI
             var headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 70,
+                Height = 65,
                 BackColor = Color.FromArgb(24, 76, 120),
-                Padding = new Padding(15, 12, 15, 12)
+                Padding = new Padding(15, 10, 15, 10)
             };
 
             var lblTitle = new Label
@@ -63,47 +76,142 @@ namespace FAROSceneHelloWorld.UI
 
             var lblSubtitle = new Label
             {
-                Text = "Spatial Voxel Grid • PCA Normal Estimation • RANSAC Plane & Cylinder Segmentation",
+                Text = "Spatial Voxel Grid • PCA Normal Estimation • RANSAC Plane & Cylinder Extraction",
                 ForeColor = Color.FromArgb(200, 225, 250),
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Regular),
                 AutoSize = true,
-                Location = new Point(16, 36)
+                Location = new Point(16, 34)
             };
 
             headerPanel.Controls.Add(lblTitle);
             headerPanel.Controls.Add(lblSubtitle);
             this.Controls.Add(headerPanel);
 
-            // 2. Progress Section
+            // 2. Data Source Selector & Information Card
+            var sourcePanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 90,
+                Padding = new Padding(15, 8, 15, 5),
+                BackColor = Color.FromArgb(245, 247, 250)
+            };
+
+            var innerSourceCard = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(10, 8, 10, 8)
+            };
+
+            var btnFlow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 34,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
+            };
+
+            _btnLoadFile = new Button
+            {
+                Text = "📂 Open Scan File (.pts, .xyz)...",
+                Size = new Size(205, 28),
+                BackColor = Color.FromArgb(0, 120, 215),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 8, 0)
+            };
+            _btnLoadFile.FlatAppearance.BorderSize = 0;
+            _btnLoadFile.Click += (s, e) => OnOpenFileClicked();
+
+            _btnQueryScene = new Button
+            {
+                Text = "🔄 SCENE Active Scan",
+                Size = new Size(160, 28),
+                BackColor = Color.FromArgb(43, 87, 154),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 8, 0)
+            };
+            _btnQueryScene.FlatAppearance.BorderSize = 0;
+            _btnQueryScene.Click += (s, e) => OnQuerySceneClicked();
+
+            _btnDemoBenchmark = new Button
+            {
+                Text = "🧪 Load Demo Benchmark",
+                Size = new Size(175, 28),
+                BackColor = Color.FromArgb(100, 100, 100),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 0, 0)
+            };
+            _btnDemoBenchmark.FlatAppearance.BorderSize = 0;
+            _btnDemoBenchmark.Click += (s, e) => OnLoadBenchmarkClicked();
+
+            btnFlow.Controls.Add(_btnLoadFile);
+            btnFlow.Controls.Add(_btnQueryScene);
+            btnFlow.Controls.Add(_btnDemoBenchmark);
+
+            _lblSourceBadge = new Label
+            {
+                Text = "Data Source: Checking SCENE workspace...",
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(40, 40, 40),
+                Location = new Point(10, 40),
+                AutoSize = true
+            };
+
+            _lblSourceDetails = new Label
+            {
+                Text = "Choose a point cloud file (.pts/.xyz) or query the active SCENE scan to begin.",
+                Font = new Font("Segoe UI", 8F, FontStyle.Regular),
+                ForeColor = Color.FromArgb(110, 110, 110),
+                Location = new Point(11, 60),
+                AutoSize = true
+            };
+
+            innerSourceCard.Controls.Add(_lblSourceDetails);
+            innerSourceCard.Controls.Add(_lblSourceBadge);
+            innerSourceCard.Controls.Add(btnFlow);
+            sourcePanel.Controls.Add(innerSourceCard);
+            this.Controls.Add(sourcePanel);
+
+            // 3. Progress Section
             var progressPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 75,
-                Padding = new Padding(15, 10, 15, 5),
+                Height = 65,
+                Padding = new Padding(15, 6, 15, 4),
                 BackColor = Color.FromArgb(245, 247, 250)
             };
 
             _lblStatus = new Label
             {
-                Text = "Ready to classify active scan elements.",
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                Location = new Point(15, 8),
+                Text = "Ready to analyze point cloud geometry.",
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                Location = new Point(15, 5),
                 AutoSize = true
             };
 
             _lblSubStatus = new Label
             {
-                Text = "Click 'Run Classification' to extract Floors, Ceilings, Walls, Columns, and Pipes.",
+                Text = "Select your scan data source above and click 'Run Classification'.",
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Regular),
                 ForeColor = Color.FromArgb(100, 100, 100),
-                Location = new Point(15, 28),
+                Location = new Point(15, 23),
                 AutoSize = true
             };
 
             _progressBar = new ProgressBar
             {
-                Location = new Point(15, 48),
-                Size = new Size(635, 16),
+                Location = new Point(15, 42),
+                Size = new Size(675, 14),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 Style = ProgressBarStyle.Continuous
             };
@@ -113,16 +221,16 @@ namespace FAROSceneHelloWorld.UI
             progressPanel.Controls.Add(_progressBar);
             this.Controls.Add(progressPanel);
 
-            // 3. TreeView for Hierarchical Cluster Results
+            // 4. TreeView for Hierarchical Cluster Results
             var resultsPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(15, 5, 15, 10)
+                Padding = new Padding(15, 4, 15, 8)
             };
 
             var lblTreeHeader = new Label
             {
-                Text = "Detected Clusters & Geometric Primitives (SCENE Project Tree):",
+                Text = "Detected Elements & SCENE Project Clusters:",
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 Dock = DockStyle.Top,
                 Height = 22
@@ -140,21 +248,21 @@ namespace FAROSceneHelloWorld.UI
             resultsPanel.Controls.Add(lblTreeHeader);
             this.Controls.Add(resultsPanel);
 
-            // 4. Bottom Action Bar
+            // 5. Bottom Action Bar
             var bottomPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 50,
+                Height = 48,
                 BackColor = Color.FromArgb(235, 238, 242),
-                Padding = new Padding(15, 10, 15, 10)
+                Padding = new Padding(15, 9, 15, 9)
             };
 
             _btnRun = new Button
             {
                 Text = "▶ Run Classification",
-                Size = new Size(150, 30),
-                Location = new Point(15, 10),
-                BackColor = Color.FromArgb(0, 120, 215),
+                Size = new Size(160, 30),
+                Location = new Point(15, 9),
+                BackColor = Color.FromArgb(16, 124, 65), // Green
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
@@ -167,7 +275,7 @@ namespace FAROSceneHelloWorld.UI
             {
                 Text = "Export 3D DXF",
                 Size = new Size(115, 30),
-                Location = new Point(175, 10),
+                Location = new Point(185, 9),
                 Enabled = false,
                 UseVisualStyleBackColor = true
             };
@@ -176,8 +284,8 @@ namespace FAROSceneHelloWorld.UI
             _btnExportPts = new Button
             {
                 Text = "Export PTS Points",
+                Location = new Point(308, 9),
                 Size = new Size(125, 30),
-                Location = new Point(298, 10),
                 Enabled = false,
                 UseVisualStyleBackColor = true
             };
@@ -188,7 +296,7 @@ namespace FAROSceneHelloWorld.UI
                 Text = "Close",
                 Size = new Size(85, 30),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(bottomPanel.Width - 100, 10),
+                Location = new Point(bottomPanel.Width - 100, 9),
                 UseVisualStyleBackColor = true
             };
             _btnClose.Click += (s, e) => this.Close();
@@ -200,15 +308,145 @@ namespace FAROSceneHelloWorld.UI
             this.Controls.Add(bottomPanel);
         }
 
+        private void CheckInitialSource()
+        {
+            var cloud = ScanDataLoader.TryLoadActiveScanPoints(_host, out string sourceDesc, out string diagnostic);
+            if (cloud != null && cloud.Count > 0)
+            {
+                _currentCloud = cloud;
+                _currentSourceDesc = sourceDesc;
+                _lblSourceBadge.Text = $"Data Source: {sourceDesc}";
+                _lblSourceBadge.ForeColor = Color.FromArgb(16, 124, 65);
+                _lblSourceDetails.Text = $"Points: {cloud.Count:N0} | Bounds: Min={cloud.BoundingMin:F2}, Max={cloud.BoundingMax:F2}";
+                _lblStatus.Text = $"Active scan loaded ({cloud.Count:N0} points). Ready to classify.";
+            }
+            else
+            {
+                _lblSourceBadge.Text = "Data Source: No active scan loaded in SCENE";
+                _lblSourceBadge.ForeColor = Color.FromArgb(180, 80, 0);
+                _lblSourceDetails.Text = diagnostic + " -> Click 'Open Scan File' or 'Load Demo Benchmark'.";
+            }
+        }
+
+        private void OnOpenFileClicked()
+        {
+            using (var ofd = new OpenFileDialog())
+            {
+                ofd.Title = "Open Point Cloud Scan File";
+                ofd.Filter = "Point Cloud Files (*.pts;*.xyz;*.txt;*.csv;*.asc)|*.pts;*.xyz;*.txt;*.csv;*.asc|All Files (*.*)|*.*";
+
+                if (ofd.ShowDialog(this) == DialogResult.OK)
+                {
+                    try
+                    {
+                        Cursor.Current = Cursors.WaitCursor;
+                        _lblStatus.Text = $"Loading {Path.GetFileName(ofd.FileName)}...";
+                        _progressBar.Value = 10;
+
+                        var cloud = ScanDataLoader.LoadFromFile(ofd.FileName, (msg, pct) =>
+                        {
+                            if (this.InvokeRequired) this.BeginInvoke(new Action(() => _lblSubStatus.Text = msg));
+                            else _lblSubStatus.Text = msg;
+                        });
+
+                        _currentCloud = cloud;
+                        _currentSourceDesc = $"File: '{Path.GetFileName(ofd.FileName)}' ({cloud.Count:N0} points)";
+
+                        _lblSourceBadge.Text = $"Data Source: Real Scan File: {Path.GetFileName(ofd.FileName)} ({cloud.Count:N0} points)";
+                        _lblSourceBadge.ForeColor = Color.FromArgb(0, 102, 204);
+                        _lblSourceDetails.Text = $"Path: {ofd.FileName} | Bounds: Min={cloud.BoundingMin:F2}, Max={cloud.BoundingMax:F2}";
+
+                        _lblStatus.Text = $"Real scan loaded successfully ({cloud.Count:N0} points). Ready to classify.";
+                        _lblSubStatus.Text = "Click 'Run Classification' to analyze real point cloud geometry.";
+                        _progressBar.Value = 0;
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(this, "Failed to load scan file:\n\n" + ex.Message, "Error Loading Scan", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    finally
+                    {
+                        Cursor.Current = Cursors.Default;
+                    }
+                }
+            }
+        }
+
+        private void OnQuerySceneClicked()
+        {
+            var cloud = ScanDataLoader.TryLoadActiveScanPoints(_host, out string sourceDesc, out string diagnostic);
+            if (cloud != null && cloud.Count > 0)
+            {
+                _currentCloud = cloud;
+                _currentSourceDesc = sourceDesc;
+                _lblSourceBadge.Text = $"Data Source: {sourceDesc}";
+                _lblSourceBadge.ForeColor = Color.FromArgb(16, 124, 65);
+                _lblSourceDetails.Text = $"Points: {cloud.Count:N0} | Bounds: Min={cloud.BoundingMin:F2}, Max={cloud.BoundingMax:F2}";
+                _lblStatus.Text = $"Active scan loaded ({cloud.Count:N0} points). Ready to classify.";
+                _lblSubStatus.Text = "Click 'Run Classification' to extract elements.";
+            }
+            else
+            {
+                MessageBox.Show(this,
+                    "Unable to read active scan points from SCENE workspace:\n\n" + diagnostic +
+                    "\n\nTips:\n1. Make sure a project is open in SCENE.\n2. In SCENE's Structure Tree, right-click your scan and choose 'Load Points' into memory.\n3. Alternatively, click 'Open Scan File' to load your scan directly.",
+                    "SCENE Workspace Query",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+        }
+
+        private void OnLoadBenchmarkClicked()
+        {
+            _currentCloud = ScanDataLoader.GenerateBenchmarkScanCloud();
+            _currentSourceDesc = "Synthetic TLS Indoor Scan Benchmark (Demo Mode - 149,000 pts)";
+
+            _lblSourceBadge.Text = "Data Source: 🧪 Synthetic TLS Benchmark Room (Demo Mode - 149,000 pts)";
+            _lblSourceBadge.ForeColor = Color.FromArgb(100, 100, 100);
+            _lblSourceDetails.Text = "Demo scan: 12m x 10m x 3.2m synthetic indoor room (Ground Floor, Ceiling, 4 Walls, 2 Columns, 2 Pipes).";
+
+            _lblStatus.Text = "Demo benchmark loaded (149,000 points).";
+            _lblSubStatus.Text = "Click 'Run Classification' to test algorithms against synthetic benchmark geometry.";
+        }
+
         private async Task StartClassificationAsync()
         {
+            if (_currentCloud == null || _currentCloud.Count == 0)
+            {
+                var choice = MessageBox.Show(this,
+                    "No point cloud is currently selected.\n\n" +
+                    "Would you like to:\n" +
+                    "- Click 'Yes' to browse and open a real scan file (.pts, .xyz, .txt)\n" +
+                    "- Click 'No' to run the Demo Benchmark Scan for testing",
+                    "Select Point Cloud Source",
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Question);
+
+                if (choice == DialogResult.Yes)
+                {
+                    OnOpenFileClicked();
+                    if (_currentCloud == null) return;
+                }
+                else if (choice == DialogResult.No)
+                {
+                    OnLoadBenchmarkClicked();
+                }
+                else
+                {
+                    return;
+                }
+            }
+
             _btnRun.Enabled = false;
+            _btnLoadFile.Enabled = false;
+            _btnQueryScene.Enabled = false;
+            _btnDemoBenchmark.Enabled = false;
             _btnExportDxf.Enabled = false;
             _btnExportPts.Enabled = false;
             _treeResults.Nodes.Clear();
 
-            _lblStatus.Text = "Acquiring scan data...";
-            _lblSubStatus.Text = "Querying active workspace scan or synthetic TLS benchmark...";
+            _lblStatus.Text = $"Analyzing {_currentSourceDesc}...";
+            _lblSubStatus.Text = "Downsampling with spatial voxel grid...";
             _progressBar.Value = 5;
 
             var classifier = new ElementClassifier();
@@ -231,25 +469,20 @@ namespace FAROSceneHelloWorld.UI
 
             await Task.Run(() =>
             {
-                // 1. Load active scan points or benchmark scan
-                var rawCloud = ScanDataLoader.LoadActiveScanPoints(_host, out string sourceDesc);
-                if (this.InvokeRequired)
-                {
-                    this.BeginInvoke(new Action(() => _lblStatus.Text = $"Processing {sourceDesc}..."));
-                }
-
-                // 2. Execute full classification pipeline
-                _lastResult = classifier.Execute(rawCloud, _host, voxelSize: 0.05f);
+                _lastResult = classifier.Execute(_currentCloud, _host, voxelSize: 0.035f);
             });
 
             // Populate TreeView
             PopulateResultsTree(_lastResult);
 
             _lblStatus.Text = $"Classification Complete: {_lastResult.TotalDetectedCount} elements extracted.";
-            _lblSubStatus.Text = $"Processed in {_lastResult.ExecutionTime.TotalSeconds:F2} seconds. Inserted into SCENE project clusters.";
+            _lblSubStatus.Text = $"Processed in {_lastResult.ExecutionTime.TotalSeconds:F2} seconds. Organized into SCENE project clusters.";
             _progressBar.Value = 100;
 
             _btnRun.Enabled = true;
+            _btnLoadFile.Enabled = true;
+            _btnQueryScene.Enabled = true;
+            _btnDemoBenchmark.Enabled = true;
             _btnExportDxf.Enabled = true;
             _btnExportPts.Enabled = true;
         }
@@ -259,7 +492,7 @@ namespace FAROSceneHelloWorld.UI
             _treeResults.BeginUpdate();
             _treeResults.Nodes.Clear();
 
-            var root = new TreeNode($"SCENE Project Workspace (Extracted: {result.TotalDetectedCount} elements)");
+            var root = new TreeNode($"Extracted Results: {result.TotalDetectedCount} elements from {_currentSourceDesc}");
 
             // Cluster 1: Floors
             var nodeFloors = new TreeNode($"📁 Floors ({result.Floors.Count})");
