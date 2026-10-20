@@ -52,6 +52,12 @@
                 SmallIcon="Resources\icon16.png"
                 LargeIcon="Resources\icon32.png"
                 Command="CountScanPointsCommand" />
+        <Button Name="BtnClassifyElements"
+                Title="Auto-Classify Elements"
+                ToolTip="Automatically extract and classify Floors, Ceilings, Walls, Columns, and Pipes"
+                SmallIcon="Resources\icon16.png"
+                LargeIcon="Resources\icon32.png"
+                Command="ClassifyElementsCommand" />
       </Group>
     </Tab>
   </Ribbon>

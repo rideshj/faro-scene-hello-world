@@ -57,6 +57,7 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Numerics" />
 
     <!-- FARO SCENE SDK Assembly References
          CRITICAL CONSTRAINT: Private=False (CopyLocal=False) must be strictly enforced.

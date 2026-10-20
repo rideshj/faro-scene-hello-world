@@ -26,6 +26,8 @@ namespace FAROSceneHelloWorld
         private const string GroupTitle = "Workspace Tools";
         private const string ButtonId = "BtnCountScanPoints";
         private const string ButtonTitle = "Scan Stats";
+        private const string ClassifyButtonId = "BtnClassifyElements";
+        private const string ClassifyButtonTitle = "Auto-Classify Elements";
 
         // Singleton instance for bridge dispatch
         public static EntryPoint Instance { get; } = new EntryPoint();
@@ -33,7 +35,9 @@ namespace FAROSceneHelloWorld
         // Cached host and UI references for lifecycle management
         private IAppHost _host;
         private IRibbonButton _ribbonButton;
+        private IRibbonButton _ribbonButtonClassify;
         private CountPointsCommand _command;
+        private ClassifyElementsCommand _classifyCommand;
         private Image _smallIcon;
         private Image _largeIcon;
 
@@ -168,11 +172,33 @@ namespace FAROSceneHelloWorld
                 _ribbonButton.Click += OnRibbonButtonClicked;
                 _host.Logger?.LogInfo("[FAROSceneHelloWorld] Ribbon button registered and event handler attached.");
             }
+
+            _ribbonButtonClassify = group.CreateButton(ClassifyButtonId, ClassifyButtonTitle);
+            if (_ribbonButtonClassify != null)
+            {
+                _ribbonButtonClassify.ToolTip = "Automatically segment and classify structural and MEP elements (Floors, Walls, Ceilings, Columns, Pipes)";
+                _ribbonButtonClassify.Enabled = true;
+
+                if (_smallIcon != null) _ribbonButtonClassify.SmallImage = _smallIcon;
+                if (_largeIcon != null) _ribbonButtonClassify.LargeImage = _largeIcon;
+
+                _ribbonButtonClassify.Click += OnClassifyButtonClicked;
+                _host.Logger?.LogInfo("[FAROSceneHelloWorld] Ribbon classify button registered and event handler attached.");
+            }
         }
 
         private void OnRibbonButtonClicked(object sender, EventArgs e)
         {
             ShowInteractiveWindow(_host);
+        }
+
+        private void OnClassifyButtonClicked(object sender, EventArgs e)
+        {
+            if (_classifyCommand == null && _host != null)
+            {
+                _classifyCommand = new ClassifyElementsCommand(_host);
+            }
+            _classifyCommand?.Execute(sender, e);
         }
 
         /// <summary>
@@ -282,11 +308,17 @@ namespace FAROSceneHelloWorld
                     _ribbonButton.Click -= OnRibbonButtonClicked;
                 }
 
+                if (_ribbonButtonClassify != null)
+                {
+                    _ribbonButtonClassify.Click -= OnClassifyButtonClicked;
+                }
+
                 try
                 {
                     var tab = _host?.RibbonManager?.GetTab(TabId);
                     var group = tab?.GetGroup(GroupId);
                     group?.RemoveItem(ButtonId);
+                    group?.RemoveItem(ClassifyButtonId);
                 }
                 catch
                 {
@@ -300,7 +332,9 @@ namespace FAROSceneHelloWorld
                 _largeIcon = null;
 
                 _ribbonButton = null;
+                _ribbonButtonClassify = null;
                 _command = null;
+                _classifyCommand = null;
 
                 _host?.Logger?.LogInfo("[FAROSceneHelloWorld] Teardown complete.");
             }

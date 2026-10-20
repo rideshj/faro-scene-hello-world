@@ -35,6 +35,7 @@ namespace FAROSceneHelloWorld.UI
         private Button _btnSysInfo;
         private Button _btnSimulate;
         private Button _btnModalStats;
+        private Button _btnClassify;
         private Button _btnClearLog;
         private Button _btnCopyLog;
 
@@ -152,7 +153,7 @@ namespace FAROSceneHelloWorld.UI
             var actionPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 90,
+                Height = 125,
                 Padding = new Padding(15, 5, 15, 5),
                 BackColor = Color.FromArgb(245, 247, 250)
             };
@@ -167,12 +168,14 @@ namespace FAROSceneHelloWorld.UI
 
             _btnPing = CreateActionButton("🖱️ Click Me / Ping", Color.FromArgb(0, 120, 215), (s, e) => OnPingClicked());
             _btnWorkspace = CreateActionButton("📁 Query Workspace", Color.FromArgb(43, 87, 154), (s, e) => OnQueryWorkspaceClicked());
+            _btnClassify = CreateActionButton("🏗️ Auto-Classify", Color.FromArgb(16, 124, 65), (s, e) => OnAutoClassifyClicked());
             _btnSysInfo = CreateActionButton("💻 System Info", Color.FromArgb(70, 70, 70), (s, e) => OnSystemInfoClicked());
             _btnSimulate = CreateActionButton("⚡ Background Task", Color.FromArgb(180, 80, 0), (s, e) => OnSimulateTaskClicked());
             _btnModalStats = CreateActionButton("📊 Scan Stats Dialog", Color.FromArgb(0, 130, 130), (s, e) => OnModalStatsClicked());
 
             flowButtons.Controls.Add(_btnPing);
             flowButtons.Controls.Add(_btnWorkspace);
+            flowButtons.Controls.Add(_btnClassify);
             flowButtons.Controls.Add(_btnSysInfo);
             flowButtons.Controls.Add(_btnSimulate);
             flowButtons.Controls.Add(_btnModalStats);
@@ -442,6 +445,20 @@ namespace FAROSceneHelloWorld.UI
             catch (Exception ex)
             {
                 LogEvent("ERROR", $"Failed to open stats dialog: {ex.Message}");
+            }
+        }
+
+        private void OnAutoClassifyClicked()
+        {
+            LogEvent("UI", "Launching Structural & MEP Auto-Classifier...");
+            try
+            {
+                var cmd = new Commands.ClassifyElementsCommand(_host);
+                cmd.Execute(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                LogEvent("ERROR", $"Failed to open Auto-Classifier: {ex.Message}");
             }
         }
 

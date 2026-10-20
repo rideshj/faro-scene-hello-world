@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Numerics" />
+    <Reference Include="FARO.LS.SDK.AppLogic">
+      <HintPath>..\..\lib\FARO.LS.SDK.AppLogic.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="FARO.LS.SDK.DataLogic">
+      <HintPath>..\..\lib\FARO.LS.SDK.DataLogic.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <ProjectReference Include="..\..\src\FAROSceneHelloWorld\FAROSceneHelloWorld.csproj" />
+  </ItemGroup>
+</Project>
