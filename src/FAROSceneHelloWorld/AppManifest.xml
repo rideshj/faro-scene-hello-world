@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- XML v. 2 -->
+<!-- 'SCENE XML' -->
+<!-- NEXT: XML Root Element -->
+<FARO>
+  <AttrContainer>
+    <Attr type="String">
+      <Name value="'Name'" />
+      <Value value="'FAROSceneHelloWorld'" />
+    </Attr>
+    <Attr type="String">
+      <Name value="'version'" />
+      <Value value="'1.0.0.0'" />
+    </Attr>
+    <Attr type="String">
+      <Name value="'Description'" />
+      <Value value="'Counts and displays active scan points and open scans.'" />
+    </Attr>
+    <Attr type="String">
+      <Name value="'app_dll'" />
+      <Value value="'FAROSceneHelloWorld.dll'" />
+    </Attr>
+    <Attr type="String">
+      <Name value="'minimum_required_api'" />
+      <Value value="'2.0.25.7594'" />
+    </Attr>
+  </AttrContainer>
+</FARO>

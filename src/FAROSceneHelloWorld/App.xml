@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FARO SCENE App Manifest (App.xml)
+  This manifest defines the metadata, minimum compatibility, entry point class,
+  and declarative UI integration for the FARO SCENE App runtime.
+-->
+<App Id="{6E7D2B9F-8A4C-4E7B-9521-7A39B1F20E5A}"
+     Name="FAROSceneHelloWorld"
+     DisplayName="Scan Point Counter"
+     Version="1.0.0.0">
+
+  <!-- Unique Application Identifier -->
+  <Id>6E7D2B9F-8A4C-4E7B-9521-7A39B1F20E5A</Id>
+  <Name>FAROSceneHelloWorld</Name>
+  <DisplayName>Scan Point Counter</DisplayName>
+  <Version>1.0.0.0</Version>
+  <Author>Senior .NET Software Engineer</Author>
+  <Company>Engineering Solutions</Company>
+  <Description>Counts and displays the number of active scan points and open scans in the current FARO SCENE workspace.</Description>
+
+  <!-- Minimum and maximum SCENE version boundaries -->
+  <Dependencies>
+    <MinSceneVersion>6.0.0.0</MinSceneVersion>
+    <MaxSceneVersion>2026.9.9.9</MaxSceneVersion>
+  </Dependencies>
+
+  <!-- Primary Managed Entry Point -->
+  <EntryPoint>
+    <Assembly>FAROSceneHelloWorld.dll</Assembly>
+    <Class>FAROSceneHelloWorld.EntryPoint</Class>
+  </EntryPoint>
+
+  <!-- Dual schema support for alternative SCENE XML deserializers -->
+  <Assemblies>
+    <Assembly Path="FAROSceneHelloWorld.dll" EntryClass="FAROSceneHelloWorld.EntryPoint" />
+  </Assemblies>
+
+  <!-- Application Icons (SCENE App Center & App Manager) -->
+  <Icons>
+    <Icon Size="16" Path="Resources\icon16.png" />
+    <Icon Size="32" Path="Resources\icon32.png" />
+    <Icon Size="64" Path="Resources\app_icon.png" />
+  </Icons>
+
+  <!-- Declarative Ribbon UI Integration -->
+  <Ribbon>
+    <Tab Name="Apps" Title="Apps">
+      <Group Name="WorkspaceTools" Title="Workspace Tools">
+        <Button Name="BtnCountScanPoints"
+                Title="Scan Stats"
+                ToolTip="Count active scan points and open scans in the current workspace"
+                SmallIcon="Resources\icon16.png"
+                LargeIcon="Resources\icon32.png"
+                Command="CountScanPointsCommand" />
+      </Group>
+    </Tab>
+  </Ribbon>
+
+</App>

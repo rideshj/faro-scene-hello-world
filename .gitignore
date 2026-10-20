@@ -1,0 +1,15 @@
+# Visual Studio & Build Outputs
+[Bb]in/
+[Oo]bj/
+dist/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Packages & Temporary Files
+*.nupkg
+project.lock.json
+project.assets.json
+*.log
