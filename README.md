@@ -1,10 +1,21 @@
-# FARO SCENE Open API - "Hello World" & Structural/MEP Auto-Classifier Add-In
+# FARO SCENE Open API Add-Ins & Geometry Engines
 
-A minimal, production-ready, dependency-free FARO SCENE extension built in pure C# (.NET Framework 4.8 x64). This add-in provides:
-1. **Interactive Workspace Controller & Stats**: Ribbon integration, lifecycle management (`IApp` / `IAppHost`), live diagnostic toolbox, and scan point aggregation.
-2. **Automated 3D Structural & MEP Classification**: An in-process, high-performance point cloud geometry engine that automatically segments and classifies **Floors**, **Ceilings/Slabs**, **Walls**, **Columns**, and **MEP Pipes** from TLS scans, organizing them into dedicated SCENE Project Tree clusters.
+This repository contains two production-ready, dependency-free FARO SCENE extensions built in pure C# (.NET Framework 4.8 x64):
 
-For complete reverse-engineering insights, calling convention specifications, and algorithm traceability, see [docs/TRACEABILITY.md](docs/TRACEABILITY.md).
+1. **SD Card Field-to-Finish Auto-Registration Add-In** (`FAROSceneSDCardWorkflow`):
+   - **Automated Removable Media Detection**: Continuously monitors hardware drives for FARO SD card insertion.
+   - **Auto-Prompt UI**: Pops up an interactive dialog to create a new project, choose target types, and set filtering.
+   - **High-Speed Buffered File Ingestion**: Streams scans from SD storage to organized project folders (`Scans/`, `Exports/`, `Reports/`).
+   - **Sub-Millimeter Target Detection**: Algebraic Delogne-Kåsa least-squares sphere fitting for 140mm & 200mm survey spheres.
+   - **Target-Based 6-DOF Registration**: Closed-form Horn / Kabsch SVD solver ($R, t$) with pairwise Euclidean distance invariant matching.
+   - **Interactive Top View (Bird's Eye) Map**: 2D GDI+ orthographic canvas with scanner station tripods ($\bigoplus$), detected targets ($\odot$), footprints, and tension link residuals.
+   - **Process Completion**: Generates audit reports, updates SCENE project transforms, and offers safe SD card unmounting.
+   - Full documentation: [docs/SD_CARD_WORKFLOW.md](docs/SD_CARD_WORKFLOW.md).
+
+2. **Structural & MEP Classification Add-In** (`FAROSceneHelloWorld`):
+   - **Interactive Workspace Controller & Stats**: Ribbon integration, lifecycle management (`IApp` / `IAppHost`), live diagnostic toolbox, and scan point aggregation.
+   - **Automated 3D Structural & MEP Classification**: An in-process, high-performance point cloud geometry engine that automatically segments and classifies **Floors**, **Ceilings/Slabs**, **Walls**, **Columns**, and **MEP Pipes** from TLS scans, organizing them into dedicated SCENE Project Tree clusters.
+   - Full documentation: [docs/TRACEABILITY.md](docs/TRACEABILITY.md).
 
 ---
 

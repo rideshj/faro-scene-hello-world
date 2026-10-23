@@ -4,6 +4,10 @@ VisualStudioVersion = 17.7.34221.43
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FAROSceneHelloWorld", "src\FAROSceneHelloWorld\FAROSceneHelloWorld.csproj", "{E915DCDE-7C16-48BD-BE36-7BBECEE5B37D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FAROSceneSDCardWorkflow", "src\FAROSceneSDCardWorkflow\FAROSceneSDCardWorkflow.csproj", "{8B7A1E3C-4D5F-4E90-B213-98C7F012A34E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SDCardWorkflowVerification", "tests\SDCardWorkflowVerification\SDCardWorkflowVerification.csproj", "{C27D56B1-3E2A-4B60-918C-8F763152C89A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -14,6 +18,14 @@ Global
 		{E915DCDE-7C16-48BD-BE36-7BBECEE5B37D}.Debug|x64.Build.0 = Debug|x64
 		{E915DCDE-7C16-48BD-BE36-7BBECEE5B37D}.Release|x64.ActiveCfg = Release|x64
 		{E915DCDE-7C16-48BD-BE36-7BBECEE5B37D}.Release|x64.Build.0 = Release|x64
+		{8B7A1E3C-4D5F-4E90-B213-98C7F012A34E}.Debug|x64.ActiveCfg = Debug|x64
+		{8B7A1E3C-4D5F-4E90-B213-98C7F012A34E}.Debug|x64.Build.0 = Debug|x64
+		{8B7A1E3C-4D5F-4E90-B213-98C7F012A34E}.Release|x64.ActiveCfg = Release|x64
+		{8B7A1E3C-4D5F-4E90-B213-98C7F012A34E}.Release|x64.Build.0 = Release|x64
+		{C27D56B1-3E2A-4B60-918C-8F763152C89A}.Debug|x64.ActiveCfg = Debug|x64
+		{C27D56B1-3E2A-4B60-918C-8F763152C89A}.Debug|x64.Build.0 = Debug|x64
+		{C27D56B1-3E2A-4B60-918C-8F763152C89A}.Release|x64.ActiveCfg = Release|x64
+		{C27D56B1-3E2A-4B60-918C-8F763152C89A}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FARO SCENE App Manifest (App.xml)
+  Automated SD Card Detection, Import, Target-Based Registration, and Top-View Verification.
+-->
+<App Id="{8B7A1E3C-4D5F-4E90-B213-98C7F012A34E}"
+     Name="FAROSceneSDCardWorkflow"
+     DisplayName="SD Card Auto-Register"
+     Version="1.0.0.0">
+
+  <Id>8B7A1E3C-4D5F-4E90-B213-98C7F012A34E</Id>
+  <Name>FAROSceneSDCardWorkflow</Name>
+  <DisplayName>SD Card Auto-Register</DisplayName>
+  <Version>1.0.0.0</Version>
+  <Author>Senior .NET Software Engineer</Author>
+  <Company>Engineering Solutions</Company>
+  <Description>Automated SD card detection, scan import, processing, target-based registration, and top-view verification.</Description>
+
+  <Dependencies>
+    <MinSceneVersion>6.0.0.0</MinSceneVersion>
+    <MaxSceneVersion>2026.9.9.9</MaxSceneVersion>
+  </Dependencies>
+
+  <EntryPoint>
+    <Assembly>FAROSceneSDCardWorkflow.dll</Assembly>
+    <Class>FAROSceneSDCardWorkflow.EntryPoint</Class>
+  </EntryPoint>
+
+  <Assemblies>
+    <Assembly Path="FAROSceneSDCardWorkflow.dll" EntryClass="FAROSceneSDCardWorkflow.EntryPoint" />
+  </Assemblies>
+
+  <Icons>
+    <Icon Size="16" Path="Resources\icon16.png" />
+    <Icon Size="32" Path="Resources\icon32.png" />
+    <Icon Size="64" Path="Resources\app_icon.png" />
+  </Icons>
+
+  <Ribbon>
+    <Tab Name="Apps" Title="Apps">
+      <Group Name="SDCardWorkflowGroup" Title="SD Card Automation">
+        <Button Name="BtnAutoWorkflow"
+                Title="SD Auto-Workflow"
+                ToolTip="Automated SD Card detection, project creation, scan import, target registration, and top-view verification"
+                SmallIcon="Resources\icon16.png"
+                LargeIcon="Resources\icon32.png"
+                Command="AutoWorkflowCommand" />
+        <Button Name="BtnDashboard"
+                Title="Workflow Center"
+                ToolTip="Open SD Card Workflow Dashboard, Monitor &amp; Settings"
+                SmallIcon="Resources\icon16.png"
+                LargeIcon="Resources\icon32.png"
+                Command="WorkflowDashboardCommand" />
+      </Group>
+    </Tab>
+  </Ribbon>
+
+</App>
